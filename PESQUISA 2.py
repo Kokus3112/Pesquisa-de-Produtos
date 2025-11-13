@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import hashlib
+from datetime import datetime
 
 # URL do Google Sheets exportado como CSV
 GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/1OT7_kwu1RqUEuOmf_GNq9Wl7ftc60OjwyX5omXwCTTI/export?format=csv"
@@ -26,12 +27,9 @@ def carregar_dados(url, hash_atual=None):
     )
     df.columns = df.columns.str.upper().str.strip()
 
-    # --- Corrige datas (lida com formatos mistos e converte tudo para datetime) ---
+    # --- Corrige datas (formato datetime) ---
     if 'DATA' in df.columns:
-        df['DATA'] = (
-            pd.to_datetime(df['DATA'], errors='coerce', dayfirst=True)
-            .dt.strftime('%d/%m/%Y')
-        )
+        df['DATA'] = pd.to_datetime(df['DATA'], errors='coerce', dayfirst=True)
 
     # --- Corrige colunas de moeda ---
     for col in ['PREÇO', 'TOTAL']:
@@ -58,7 +56,7 @@ def formatar_tabela(df):
     """Formata datas e valores no padrão brasileiro para exibição"""
     if df.empty:
         return df
-    df_form = df.tail(5).copy()
+    df_form = df.copy()
 
     # Formata colunas de moeda
     for col in ['PREÇO', 'TOTAL']:
@@ -84,26 +82,49 @@ def formatar_tabela(df):
 
 def app():
     st.set_page_config(page_title='Pesquisa de Produtos', layout='centered')
-    st.title('🔍 Pesquisa de Produtos')
+    st.title('📦 Controle de Entradas e Pesquisa de Produtos')
 
     # Spinner enquanto carrega
     with st.spinner('Carregando dados...'):
         hash_atual = hash_arquivo(GOOGLE_SHEET_CSV)
         dados = carregar_dados(GOOGLE_SHEET_CSV, hash_atual)
 
+    # ----------------------------
+    # FILTRO POR DATA
+    # ----------------------------
+    st.subheader("🔎 Filtro por Data de Chegada")
+    data_filtro = st.date_input("Selecione a data:", datetime.today())
+
+    if st.button("Filtrar por Data"):
+        data_selecionada = pd.to_datetime(data_filtro)
+        filtrado = dados[dados['DATA'] == data_selecionada]
+
+        if not filtrado.empty:
+            total_geral = filtrado['TOTAL'].sum()
+            st.success(f"Foram encontrados {len(filtrado)} produtos no dia {data_filtro.strftime('%d/%m/%Y')}.")
+            st.write(f"💰 **Total geral do dia:** R$ {total_geral:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.'))
+            st.dataframe(formatar_tabela(filtrado), use_container_width=True)
+        else:
+            st.warning(f"Nenhum produto encontrado em {data_filtro.strftime('%d/%m/%Y')}.")
+
+    st.divider()
+
+    # ----------------------------
+    # PESQUISA POR PRODUTO
+    # ----------------------------
+    st.subheader("🔍 Pesquisa por Nome do Produto")
     produto = st.text_input('Digite o nome do produto para pesquisar:')
 
-    if st.button('Pesquisar'):
+    if st.button('Pesquisar Produto'):
         resultado = pesquisar_produto(dados, produto)
 
         if not resultado.empty:
             st.success(f'{len(resultado)} resultado(s) encontrado(s).')
-            st.dataframe(formatar_tabela(resultado), use_container_width=True)
+            st.dataframe(formatar_tabela(resultado.tail(5)), use_container_width=True)
         else:
             st.warning('Nenhum produto encontrado.')
 
-    st.caption(f"Total de linhas carregadas: {len(dados):,}")
+    st.caption(f"📄 Total de linhas carregadas: {len(dados):,}")
 
 if __name__ == "__main__":
     app()
-
