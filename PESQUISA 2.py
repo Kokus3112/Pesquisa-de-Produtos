@@ -3,6 +3,25 @@ import pandas as pd
 import hashlib
 from datetime import datetime
 
+import base64
+
+def set_background(image_file):
+    with open(image_file, "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+    css = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpeg;base64,{encoded}");
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        opacity: 0.98;
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+
 # URL do Google Sheets exportado como CSV
 GOOGLE_SHEET_CSV = "https://docs.google.com/spreadsheets/d/1OT7_kwu1RqUEuOmf_GNq9Wl7ftc60OjwyX5omXwCTTI/export?format=csv"
 
@@ -82,6 +101,7 @@ def formatar_tabela(df):
 
 def app():
     st.set_page_config(page_title='Pesquisa de Produtos', layout='centered')
+    set_background("logo_zero.jpeg")
     st.title('📦 Controle de Entradas e Pesquisa de Produtos')
 
     # Spinner enquanto carrega
