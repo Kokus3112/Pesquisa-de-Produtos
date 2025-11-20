@@ -101,7 +101,7 @@ def formatar_tabela(df):
 
 def app():
     st.set_page_config(page_title='Pesquisa de Produtos', layout='centered')
-    set_background("logo_zero.jpeg")
+    set_background("zero_logo.jpeg")
     st.title('📦 Controle de Entradas e Pesquisa de Produtos')
 
     # Spinner enquanto carrega
